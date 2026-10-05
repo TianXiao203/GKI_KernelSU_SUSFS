@@ -818,6 +818,26 @@ jobs:
       - name: 备份基准 defconfig
         run: cp "$DEFCONFIG" "$DEFCONFIG.orig"
 
+      - name: 注入 NTsync 内核配置 (5.10)
+        if: ${{ inputs.droidspaces_ntsync }}
+        run: |
+          cd "$KERNEL_ROOT"
+          cd ./common
+          
+          # 1. 下载基础补丁
+          wget "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/ntsync_base.patch"
+          
+          # 2. 下载你提供的 5.10 兼容性补丁
+          wget "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/ntsync_compat_android12-5.10.patch"
+          
+          # 3. 按顺序应用补丁（先基础，后兼容）
+          patch -p1 < 'ntsync_base.patch'
+          patch -p1 < 'ntsync_compat_android12-5.10.patch'
+          
+          cd ../
+          # 4. 开启内核配置
+          echo "CONFIG_NTSYNC=y" >> ./common/arch/arm64/configs/gki_defconfig
+          
       - name: 集成 NoMount 挂载元模块
         if: inputs.use_nomount
         working-directory: ${{ env.KERNEL_ROOT }}/common
